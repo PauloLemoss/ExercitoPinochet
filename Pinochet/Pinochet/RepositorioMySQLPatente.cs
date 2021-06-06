@@ -8,18 +8,22 @@ using System.Threading.Tasks;
 namespace Pinochet
 {
     public class RepositorioMySQLPatente
-    {
-        MySqlConnection conexao = new MySqlConnection("Server=localhost;Port=3306;Database=exercito;Uid=root;Pwd=kabuterimon12;");
-
+    {    ConexaoDb conexao= new Conexao();
+         string sql;
+          MySqlCommand comando;
+         
+       
         public void Inserir(Patente patente)
         {
             try
             {
-                conexao.Open();
-                MySqlCommand comando = new MySqlCommand(string.Format($"INSERT INTO patente (NomePatente) VALUES (@NomePatente)"), conexao);
+                conexao.AbirConexao();
+                sql="INSERT INTO patente (NomePatente) VALUES (@NomePatente)";
+                comando = new MySqlCommand(sql, conexao.con);
                 comando.Parameters.AddWithValue("@NomePatente", patente.NomePatente);
-                comando.Parameters.AddWithValue("@IdPatente", patente.IdPatente);
+                //comando.Parameters.AddWithValue("@IdPatente", patente.IdPatente);
                 comando.ExecuteNonQuery();
+                conexao.Fechar();
             }
 
             catch (Exception ex)
@@ -36,11 +40,13 @@ namespace Pinochet
         {
             try
             {
-                conexao.Open();
-                MySqlCommand comando = new MySqlCommand(string.Format($"UPDATE patente SET NomePatente = @NomePatente WHERE id_Patente = @Id"), conexao);
+                conexao.AbirConexao();
+                sql = "UPDATE patente SET NomePatente = @NomePatente WHERE id_Patente = @Id";
+                MySqlCommand comando = new MySqlCommand(sql, conexao.con);
                 comando.Parameters.AddWithValue("@Id", patente.IdPatente);
-                comando.Parameters.AddWithValue("@Id", patente.NomePatente);
+                comando.Parameters.AddWithValue("@NomePatente", patente.NomePatente);
                 comando.ExecuteNonQuery();
+                conexao.Fechar();
             }
 
             catch (Exception ex)
@@ -50,7 +56,7 @@ namespace Pinochet
 
             finally
             {
-                conexao.Close();
+                conexao.FecharConexao();
             }
         }
 
@@ -58,10 +64,13 @@ namespace Pinochet
         {
             try
             {
-                conexao.Open();
-                MySqlCommand comando = new MySqlCommand("DELETE FROM patente WHERE id_Patente = @Id", conexao);
+                conexao.AbirConexao();
+                sql = "DELETE FROM patente WHERE id_Patente = @Id";
+                 MySqlCommand comando = new MySqlCommand(sql, conexao.con);
                 comando.Parameters.AddWithValue("@Id", id);
                 comando.ExecuteNonQuery();
+                conexao.Fechar();
+                Console.WriteLine("Registro excluido com sucesso");
             }
 
             catch (Exception ex)
@@ -76,48 +85,50 @@ namespace Pinochet
             }
         }
 
-        public List<Patente> Listar(string nome = null)
+        public void Listar(string nome = null)
         {
 
-            List<Patente> patentes = new List<Patente>();
-
+        
             try
             {
-                // Abrindo a conexão com o banco de dados;
                 conexao.Open();
-                // Instanciando um "Command" com o código SQL e a Conexão estabelecida anteriormente
-                MySqlCommand comando = null;
-                // Comando SQL em caso do parâmetro "Nome" ser NULL
+               
+                
                 if (nome == null)
                 {
                     // Comando retornando todos os clientes ser "WHERE"
-                    comando = new MySqlCommand("SELECT * FROM patente", conexao);
+                    sql = "SELECT * FROM patente order by NomePatente";
+                    comando = new MySqlCommand(sql, conexao.con);
                 }
-                // Comando SQL em caso do parâmetro "Nome" não ser NULL
+               
                 else
                 {
-
-                    // Nome é igual ao informado pelo parâmetro
-                    comando = new MySqlCommand("SELECT * FROM patente WHERE NomePatente LIKE @NomePatente", conexao);
-                    // Adicionando parâmetro SQL para o Nome
+                    sql="SELECT * FROM patente WHERE NomePatente LIKE @NomePatente";
+                    comando = new MySqlCommand(sql, conexao);
                     comando.Parameters.AddWithValue("@NomePatente", string.Format($"%{nome}%"));
-                }
-                // Executando (Efetivando) o comando criando anteriormente e salvando os dados no Data Reader
-                MySqlDataReader reader = comando.ExecuteReader();
-                // Em posse do Data Reader, vou ler os dados, sempre do primeiro até o último e "pra frente"
-                while (reader.Read())
-                {
-                    
-                    Patente patente = new Patente();
-                    // Buscando a informação ID do Banco de dados e salvando no atributo correspondente
-                    patente.IdPatente = reader.GetInt32("Id");
-                    // Buscando a informação Nome do Banco de dados e salvando no atributo correspondente
-                    patente.NomePatente = reader.GetString("Nome");
-                    Console.WriteLine(patente.IdPatente);
-                    Console.WriteLine(patente.NomePatente);
+
+
 
                 }
-                Console.WriteLine(patentes.ToString());
+               
+                MySqlDataReader reader = comando.ExecuteReader();
+                
+                if (reader.HasRows){
+                    while (reader.Read())
+                    {
+                       Console.WriteLine(reader.GetInt32("Id")); 
+                       Console.WriteLine(reader.GetString("Nome"));
+                       
+                    }
+                  }
+                  else{
+                      Console.WriteLine("Registro Nao encontrados");
+
+                  }
+             
+                
+                    
+                    
             }
             // Tratando possíveis erros ...
             catch (Exception ex)
@@ -138,13 +149,15 @@ namespace Pinochet
         public long ObterQuantidadeDePatentes()
         {
             long quantidade = 0;
-            // Bloco do Try: Tentando abrir conexão e realizar comando no Banco de Dados
+            conexao.AbirConexao();
+            sql = "SELECT COUNT(*) FROM patente";
+          
             try
             {
                 // Abrindo a conexão com o banco de dados;
                 conexao.Open();
                 // Instanciando um "Command" com o código SQL e a Conexão estabelecida anteriormente
-                MySqlCommand comando = new MySqlCommand("SELECT COUNT(*) FROM patente", conexao);
+                MySqlCommand comando = new MySqlCommand(sql, conexao.con);
                 // Executando (Efetivando) o comando criando anteriormente e salvando os dados inteiro "quantidade"
                 quantidade = (long)comando.ExecuteScalar();
             }
